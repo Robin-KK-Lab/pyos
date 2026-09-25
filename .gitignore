@@ -1,0 +1,24 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# PyOS 运行时数据
+pyos_data.json
+pyos_data.json.tmp
+run.log
+
+# 本地备份 / 测试
+_backup_*/
+*.bak
+*.bak[0-9]*
+test_dlg.py
+test_*.py
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
