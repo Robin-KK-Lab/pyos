@@ -471,7 +471,11 @@ class FileManagerApp(BaseApp):
             try:
                 self.os.fs.mkdir(target)
                 self._reload()
-                self.os.toast("已创建 {0}".format(name))
+                self.os.toast("已创建 {0}".format(name),
+                                  details=[
+                                      ("名称", name),
+                                      ("路径", target),
+                                      ("类型", "文件夹")])
                 page.pop_dialog()
             except Exception as ex:
                 err.value = "创建失败：{0}".format(ex)
@@ -537,7 +541,11 @@ class FileManagerApp(BaseApp):
                 self.os.fs.rename(self.selected, new_name)
                 self.selected = None
                 self._reload()
-                self.os.toast("已重命名为 {0}".format(new_name))
+                self.os.toast("已重命名为 {0}".format(new_name),
+                                  details=[
+                                      ("原名", old),
+                                      ("新名", new_name),
+                                      ("原路径", self.selected)])
                 page.pop_dialog()
             except Exception as ex:
                 err.value = "重命名失败：{0}".format(ex)
@@ -567,10 +575,27 @@ class FileManagerApp(BaseApp):
             self.os.toast("请先选中一个文件或文件夹")
             return
         try:
-            target = self.os.fs.trash(self.selected)
+            old_path = self.selected
+            name = old_path.rstrip("/").split("/")[-1]
+            size = "-"
+            try:
+                node = self.os.fs._get(old_path)
+                if node and not node.is_dir:
+                    size = "{} B".format(len(node.content or ""))
+                elif node:
+                    size = "目录"
+            except Exception:
+                pass
+            target = self.os.fs.trash(old_path)
             self.selected = None
             self._reload()
-            self.os.toast("已移到回收站：{0}".format(target))
+            self.os.toast("已移到回收站：{0}".format(target),
+                          details=[
+                              ("名称", name),
+                              ("原位置", old_path),
+                              ("大小", size),
+                              ("回收站", target),
+                              ("可恢复", "是（在 /trash 中）")])
         except Exception as ex:
             self.os.toast("删除失败：{0}".format(ex))
 
@@ -598,10 +623,15 @@ class FileManagerApp(BaseApp):
 
         def do_delete(ev):
             try:
+                path = self.selected
                 self.os.fs.rm(self.selected)
                 self.selected = None
                 self._reload()
-                self.os.toast("已永久删除 {0}".format(name))
+                self.os.toast("已永久删除 {0}".format(name),
+                              details=[
+                                  ("名称", name),
+                                  ("路径", path),
+                                  ("可恢复", "否（已永久删除）")])
             except Exception as ex:
                 self.os.toast("删除失败：{0}".format(ex))
             page.pop_dialog()
@@ -635,10 +665,14 @@ class FileManagerApp(BaseApp):
                     dst = self.os.fs._norm(target)
                     if not self.os.fs.is_dir(dst):
                         raise NotADirectoryError(target)
+                    src_path = self.selected
                     self.os.fs.move(self.selected, dst)
                     self.selected = None
                     self._reload()
-                    self.os.toast("已移动到 {0}".format(dst))
+                    self.os.toast("已移动到 {0}".format(dst),
+                                  details=[
+                                      ("源", src_path),
+                                      ("目标", dst)])
                 except Exception as ex:
                     self.os.toast("移动失败：{0}".format(ex))
             page.pop_dialog()
@@ -659,10 +693,20 @@ class FileManagerApp(BaseApp):
 
     def _empty_trash(self, e=None):
         try:
-            n = self.os.fs.empty_trash()
+            items = self.os.fs.list_trash()
+            n = len(items)
+            details = [("数量", "{} 项".format(n))]
+            for name, origin in items[:8]:
+                details.append((name, origin or "?"))
+            if n > 8:
+                details.append(("...", "还有 {} 项".format(n - 8)))
+            if n > 0:
+                details.append(("位置", "/trash"))
+            self.os.fs.empty_trash()
             self.selected = None
             self._reload()
-            self.os.toast("已清空回收站（{0} 项）".format(n))
+            self.os.toast("已清空回收站（{0} 项）".format(n),
+                          details=details)
         except Exception as ex:
             self.os.toast("操作失败：{0}".format(ex))
 
